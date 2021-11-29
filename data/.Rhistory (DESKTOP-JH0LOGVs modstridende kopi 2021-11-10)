@@ -1,0 +1,512 @@
+}
+}
+}
+if (add_indexing == T){
+output = list(states=states,indexing=indexing)
+} else output = states
+return(output)
+}
+# Funciton that makes a Transition Probability Matrix from the network (determanistic only)
+get_TPM = function(n, network){
+TPM = matrix(0, 2^n, 2^n)
+states = get_states(n)
+j = 1
+for (system_state in states){
+i = 1
+inputs = 0
+for (element_state in system_state){
+outputs = rep(0,n)
+if (element_state == 1) {
+outputs = network[i,]
+}
+inputs = inputs + outputs
+i = i + 1
+}
+transition_state = as.integer(inputs > 0)
+t = which(states %in% list(transition_state))
+TPM[j,t] = 1
+j = j + 1
+}
+return(TPM)
+}
+#Function that produces a list of element unconditioned distributions
+uncon_dist_elements = function(n,TPM, system_states){
+distributions = list()
+for (element in 1:n) {
+count0 = 0
+count1 = 0
+i = 1
+for (state in system_states$states){
+count = sum(TPM[,i])
+if (state[element] == 0) count0 = count + count0
+if (state[element] == 1) count1 = count + count1
+i = i + 1
+}
+distributions[[element]] = c(count0/2^n, count1/2^n)
+}
+return(distributions)
+}
+#Function the calculates the effect repertoire of a purview given a mechanism in a state.
+effect_rep = function(n, TPM, system_states, mechanism, mechanism_state, purview, uncon_distr){
+for (i in 1:length(mechanism)){
+element = mechanism[i]
+state = mechanism_state[i]
+rows = system_states$indexing[[element]][[state+1]]
+if (i == 1) TPM_rows = rows else TPM_rows = intersect(TPM_rows, rows)
+}
+marginalized_TPM = TPM[TPM_rows,]
+element_prop_distr = list()
+for(element in purview){
+prop0 = sum(marginalized_TPM[,system_states$indexing[[element]][[1]]])/length(TPM_rows)
+prop1 = sum(marginalized_TPM[,system_states$indexing[[element]][[2]]])/length(TPM_rows)
+element_prop_distr[[element]] = c(prop0,prop1)
+}
+non_purview = which(!(1:n%in%purview))
+for (element in non_purview) element_prop_distr[[element]] = uncon_distr[[element]]
+repertoire = c()
+i = 1
+for (state in system_states$states){
+prop = 1
+for(element in 1:n){
+element_state = state[element]
+prop = prop * element_prop_distr[[element]][element_state + 1]
+}
+repertoire[i] = prop
+i = i + 1
+}
+return(repertoire)
+}
+net = get_network(3,0.8,0.2)
+get_network = function(n, p, q){
+network = matrix(0,n,n)
+for (i in 1:n){
+for (j in 1:n) {
+if (i != j){
+W = sample(0:1,1,prob = c(1-p,p))
+if (W == 1) W = sample(c(1,-1),1,prob = c(1-q,q))
+network[i,j] = W
+}
+}
+}
+return(network)
+}
+#Function that checks if two networks are isomorphic. Works with n <= 6
+check_iso = function(n, net1, net2){
+check = F
+n_list = c()
+for (n1 in 1:n){
+n_list[1] = n1
+for (n2 in 1:n){
+n_list[2] = n2
+for (n3 in 1:n){
+n_list[3] = n3
+for (n4 in 1:n){
+n_list[4] = n4
+for (n5 in 1:n){
+n_list[5] = n5
+for (n6 in 1:n){
+n_list[6] = n6
+n_list = n_list[1:n]
+if(length(unique(n_list))==n){
+new_net = matrix(0,n,n)
+for (r in 1:n){
+for (c in 1:n){
+new_net[r,c] = net1[n_list[r],n_list[c]]
+}
+}
+iso = sum(new_net==net2)==n^2
+if (iso) check = T
+}
+}
+}
+}
+}
+}
+}
+return(check)
+}
+#Function that makes a list containing all possible system states, with the option of adding an indexing list
+# The indexing list contains information on which system states each specific element state can be found in
+get_states = function(n, add_indexing = F){
+if (add_indexing == T){
+indexing = list()
+for(element in 1:n) indexing[[element]] = list(c(),c())
+}
+states = list()
+for (i in 1:2^n){
+states[[i]] = as.integer(intToBits(i-1))[1:n]
+if (add_indexing == T){
+for (element in 1:n){
+if (states[[i]][element] == 0){
+indexing[[element]][[1]] = c(indexing[[element]][[1]],i)
+}  else indexing[[element]][[2]] = c(indexing[[element]][[2]],i)
+}
+}
+}
+if (add_indexing == T){
+output = list(states=states,indexing=indexing)
+} else output = states
+return(output)
+}
+# Funciton that makes a Transition Probability Matrix from the network (determanistic only)
+get_TPM = function(n, network){
+TPM = matrix(0, 2^n, 2^n)
+states = get_states(n)
+j = 1
+for (system_state in states){
+i = 1
+inputs = 0
+for (element_state in system_state){
+outputs = rep(0,n)
+if (element_state == 1) {
+outputs = network[i,]
+}
+inputs = inputs + outputs
+i = i + 1
+}
+transition_state = as.integer(inputs > 0)
+t = which(states %in% list(transition_state))
+TPM[j,t] = 1
+j = j + 1
+}
+return(TPM)
+}
+#Function that produces a list of element unconditioned distributions
+uncon_dist_elements = function(n,TPM, system_states){
+distributions = list()
+for (element in 1:n) {
+count0 = 0
+count1 = 0
+i = 1
+for (state in system_states$states){
+count = sum(TPM[,i])
+if (state[element] == 0) count0 = count + count0
+if (state[element] == 1) count1 = count + count1
+i = i + 1
+}
+distributions[[element]] = c(count0/2^n, count1/2^n)
+}
+return(distributions)
+}
+#Function the calculates the effect repertoire of a purview given a mechanism in a state.
+effect_rep = function(n, TPM, system_states, mechanism, mechanism_state, purview, uncon_distr){
+for (i in 1:length(mechanism)){
+element = mechanism[i]
+state = mechanism_state[i]
+rows = system_states$indexing[[element]][[state+1]]
+if (i == 1) TPM_rows = rows else TPM_rows = intersect(TPM_rows, rows)
+}
+marginalized_TPM = TPM[TPM_rows,]
+element_prop_distr = list()
+for(element in purview){
+prop0 = sum(marginalized_TPM[,system_states$indexing[[element]][[1]]])/length(TPM_rows)
+prop1 = sum(marginalized_TPM[,system_states$indexing[[element]][[2]]])/length(TPM_rows)
+element_prop_distr[[element]] = c(prop0,prop1)
+}
+non_purview = which(!(1:n%in%purview))
+for (element in non_purview) element_prop_distr[[element]] = uncon_distr[[element]]
+repertoire = c()
+i = 1
+for (state in system_states$states){
+prop = 1
+for(element in 1:n){
+element_state = state[element]
+prop = prop * element_prop_distr[[element]][element_state + 1]
+}
+repertoire[i] = prop
+i = i + 1
+}
+return(repertoire)
+}
+net = get_network(3,0.8,0.2)
+TPM = get_TPM(3, net)
+mechanism = c(2,3)
+mechanism_state = c(1,0)
+purview = c(2,3)
+uncon_distr = uncon_dist_elements(3, TPM, system_states)
+system_states = get_states(3, add_indexing = T)
+uncon_distr = uncon_dist_elements(3, TPM, system_states)
+example_TPM = rbind(
+c(1,0,0,0,0,0,0,0),
+c(0,0,0,0,1,0,0,0),
+c(0,0,0,0,0,1,0,0),
+c(0,1,0,0,0,0,0,0),
+c(0,1,0,0,0,0,0,0),
+c(0,0,0,0,0,0,0,1),
+c(0,0,0,0,0,1,0,0),
+c(0,0,0,1,0,0,0,0)
+)
+ucd = uncon_dist_elements(3,example_TPM,system_states)
+n = 3
+tic()
+effect_rep(n, example_TPM, system_states, 3, 0, c(2,3), ucd)
+toc()
+library(tictoc)
+tic()
+effect_rep(n, example_TPM, system_states, 3, 0, c(2,3), ucd)
+toc()
+attack_roll = function(n, ac, bonus=0){
+dice = sample(1:20, n, replace = T)
+nat20 = sum(dice==20)
+nat1 = sum(dice==1)
+dice = dice + bonus
+hit = sum(dice>ac)
+cat("Number of hits:\n")
+cat(hit)
+cat("\nNumber of nat20:\n")
+cat(nat20)
+cat("\nNumber of nat1:\n")
+cat(nat1)
+cat("\n\nRolls (+ bonus):\n")
+cat(dice)
+}
+skud_dmg = function(n){
+dmg = sample(1:8, n, replace = T) + 3
+cat("Total damage:\n")
+cat(sum(dmg))
+cat("\n\nIndivdual damages:\n")
+cat(dmg)
+}
+dagger_dmg = function(n, bonus){
+dmg = sample(1:4, n, replace = T) + bonus
+cat("Total damage:\n")
+cat(sum(dmg))
+cat("\n\nIndivdual damages:\n")
+cat(dmg)
+}
+dagger_dmg(n = 3,
+bonus = 2)
+skud_dmg(4)
+attack_roll(n = 10,
+ac = 15,
+bonus = 6
+)
+attack_roll(n = 3,
+ac = 17,
+bonus = 7
+)
+skud_dmg(1)
+dagger_dmg(n = 1,
+bonus = 2)
+attack_roll(n = 6,
+ac = 16,
+bonus = 7
+)
+skud_dmg(3)
+attack_roll(n = 6,
+ac = 17,
+bonus = 7
+)
+skud_dmg(4)
+attack_roll(n = 6,
+ac = 17,
+bonus = 7
+)
+skud_dmg(5)
+attack_roll(n = 2,
+ac = 13,
+bonus = 7
+)
+skud_dmg(2)
+# stream_data = fread("test_stream_analysis_animat29_singles.csv")
+animat_data = fread("C:\\Users\\User\\Documents\\GitHub\\phi-surprisal\\processed_data\\timestep_data_task1.csv")[run == 10 & agent == 120]
+setwd("C:\\Users\\User\\Dropbox\\CLOexternalBrain\\projects\\MA Thesis\\code\\data")
+library(data.table)
+library(ggplot2)
+# stream_data = fread("test_stream_analysis_animat29_singles.csv")
+animat_data = fread("C:\\Users\\User\\Documents\\GitHub\\phi-surprisal\\processed_data\\timestep_data_task1.csv")[run == 10 & agent == 120]
+trials = c(6,24,38,57,70,91,102,122)
+animat_states = animat_data[trial == trials[7] & timestep %in% 5:20, 4:12]
+ggplot(perspectives[trial == 7 & persp_element %in% 4 & persp_timestep %in% 10:18 & cause_timestep > 4]) +
+geom_segment(aes(y = cause, yend = reader, x = cause_timestep, xend = reader_timestep))+#, alpha = 1-strenght)) +
+geom_point(data = animat_states, aes(x=timestep, y = 1, fill = as.factor(S1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 2, fill = as.factor(S2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 3, fill = as.factor(M1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 4, fill = as.factor(M2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 5, fill = as.factor(H1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 6, fill = as.factor(H2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 7, fill = as.factor(H3)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 8, fill = as.factor(H4)), shape = 21, size=5) +
+scale_fill_manual(values = c("white","black")) +
+geom_vline(xintercept = 7) +
+facet_wrap(persp_timestep~persp_element)
+ggplot(perspectives[trial == 7 & persp_element %in% 4 & persp_timestep %in% 10:18 & cause_timestep > 4]) +
+#geom_segment(aes(y = cause, yend = reader, x = cause_timestep, xend = reader_timestep))+#, alpha = 1-strenght)) +
+geom_point(data = animat_states, aes(x=timestep, y = 1, fill = as.factor(S1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 2, fill = as.factor(S2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 3, fill = as.factor(M1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 4, fill = as.factor(M2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 5, fill = as.factor(H1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 6, fill = as.factor(H2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 7, fill = as.factor(H3)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 8, fill = as.factor(H4)), shape = 21, size=5) +
+scale_fill_manual(values = c("white","black")) +
+geom_vline(xintercept = 7) +
+facet_wrap(persp_timestep~persp_element)
+ggplot() +
+#geom_segment(aes(y = cause, yend = reader, x = cause_timestep, xend = reader_timestep))+#, alpha = 1-strenght)) +
+geom_point(data = animat_states, aes(x=timestep, y = 1, fill = as.factor(S1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 2, fill = as.factor(S2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 3, fill = as.factor(M1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 4, fill = as.factor(M2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 5, fill = as.factor(H1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 6, fill = as.factor(H2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 7, fill = as.factor(H3)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 8, fill = as.factor(H4)), shape = 21, size=5) +
+scale_fill_manual(values = c("white","black")) +
+geom_vline(xintercept = 7) +
+facet_wrap(persp_timestep~persp_element)
+ggplot() +
+#geom_segment(aes(y = cause, yend = reader, x = cause_timestep, xend = reader_timestep))+#, alpha = 1-strenght)) +
+geom_point(data = animat_states, aes(x=timestep, y = 1, fill = as.factor(S1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 2, fill = as.factor(S2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 3, fill = as.factor(M1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 4, fill = as.factor(M2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 5, fill = as.factor(H1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 6, fill = as.factor(H2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 7, fill = as.factor(H3)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 8, fill = as.factor(H4)), shape = 21, size=5) +
+scale_fill_manual(values = c("white","black")) +
+geom_vline(xintercept = 7)
+trials = c(6,24,38,57,70,91,102,122)
+animat_states = animat_data[trial == trials[1] & timestep %in% 5:20, 4:12]
+ggplot() +
+#geom_segment(aes(y = cause, yend = reader, x = cause_timestep, xend = reader_timestep))+#, alpha = 1-strenght)) +
+geom_point(data = animat_states, aes(x=timestep, y = 1, fill = as.factor(S1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 2, fill = as.factor(S2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 3, fill = as.factor(M1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 4, fill = as.factor(M2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 5, fill = as.factor(H1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 6, fill = as.factor(H2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 7, fill = as.factor(H3)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 8, fill = as.factor(H4)), shape = 21, size=5) +
+scale_fill_manual(values = c("white","black")) +
+geom_vline(xintercept = 7)
+trials = c(6,24,38,57,70,91,102,122)
+animat_states = animat_data[trial == trials[3] & timestep %in% 5:20, 4:12]
+ggplot() +
+#geom_segment(aes(y = cause, yend = reader, x = cause_timestep, xend = reader_timestep))+#, alpha = 1-strenght)) +
+geom_point(data = animat_states, aes(x=timestep, y = 1, fill = as.factor(S1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 2, fill = as.factor(S2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 3, fill = as.factor(M1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 4, fill = as.factor(M2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 5, fill = as.factor(H1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 6, fill = as.factor(H2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 7, fill = as.factor(H3)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 8, fill = as.factor(H4)), shape = 21, size=5) +
+scale_fill_manual(values = c("white","black")) +
+geom_vline(xintercept = 7) +
+facet_wrap(persp_timestep~persp_element)
+trials = c(6,24,38,57,70,91,102,122)
+animat_states = animat_data[trial == trials[3] & timestep %in% 5:20, 4:12]
+ggplot() +
+#geom_segment(aes(y = cause, yend = reader, x = cause_timestep, xend = reader_timestep))+#, alpha = 1-strenght)) +
+geom_point(data = animat_states, aes(x=timestep, y = 1, fill = as.factor(S1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 2, fill = as.factor(S2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 3, fill = as.factor(M1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 4, fill = as.factor(M2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 5, fill = as.factor(H1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 6, fill = as.factor(H2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 7, fill = as.factor(H3)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 8, fill = as.factor(H4)), shape = 21, size=5) +
+scale_fill_manual(values = c("white","black")) +
+geom_vline(xintercept = 7)
+trials = c(6,24,38,57,70,91,102,122)
+animat_states = animat_data[trial == trials[4] & timestep %in% 5:20, 4:12]
+ggplot() +
+#geom_segment(aes(y = cause, yend = reader, x = cause_timestep, xend = reader_timestep))+#, alpha = 1-strenght)) +
+geom_point(data = animat_states, aes(x=timestep, y = 1, fill = as.factor(S1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 2, fill = as.factor(S2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 3, fill = as.factor(M1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 4, fill = as.factor(M2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 5, fill = as.factor(H1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 6, fill = as.factor(H2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 7, fill = as.factor(H3)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 8, fill = as.factor(H4)), shape = 21, size=5) +
+scale_fill_manual(values = c("white","black")) +
+geom_vline(xintercept = 7)
+trials = c(6,24,38,58,70,91,102,122)
+trials = c(6,24,38,58,70,91,102,122)
+animat_states = animat_data[trial == trials[4] & timestep %in% 5:20, 4:12]
+ggplot() +
+#geom_segment(aes(y = cause, yend = reader, x = cause_timestep, xend = reader_timestep))+#, alpha = 1-strenght)) +
+geom_point(data = animat_states, aes(x=timestep, y = 1, fill = as.factor(S1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 2, fill = as.factor(S2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 3, fill = as.factor(M1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 4, fill = as.factor(M2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 5, fill = as.factor(H1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 6, fill = as.factor(H2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 7, fill = as.factor(H3)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 8, fill = as.factor(H4)), shape = 21, size=5) +
+scale_fill_manual(values = c("white","black")) +
+geom_vline(xintercept = 7)
+trials = c(6,24,38,58,70,91,102,122)
+animat_states = animat_data[trial == trials[3] & timestep %in% 5:20, 4:12]
+ggplot() +
+#geom_segment(aes(y = cause, yend = reader, x = cause_timestep, xend = reader_timestep))+#, alpha = 1-strenght)) +
+geom_point(data = animat_states, aes(x=timestep, y = 1, fill = as.factor(S1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 2, fill = as.factor(S2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 3, fill = as.factor(M1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 4, fill = as.factor(M2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 5, fill = as.factor(H1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 6, fill = as.factor(H2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 7, fill = as.factor(H3)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 8, fill = as.factor(H4)), shape = 21, size=5) +
+scale_fill_manual(values = c("white","black")) +
+geom_vline(xintercept = 7)
+trials = c(6,24,37,57,70,91,102,122)
+animat_states = animat_data[trial == trials[3] & timestep %in% 5:20, 4:12]
+ggplot() +
+#geom_segment(aes(y = cause, yend = reader, x = cause_timestep, xend = reader_timestep))+#, alpha = 1-strenght)) +
+geom_point(data = animat_states, aes(x=timestep, y = 1, fill = as.factor(S1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 2, fill = as.factor(S2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 3, fill = as.factor(M1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 4, fill = as.factor(M2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 5, fill = as.factor(H1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 6, fill = as.factor(H2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 7, fill = as.factor(H3)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 8, fill = as.factor(H4)), shape = 21, size=5) +
+scale_fill_manual(values = c("white","black")) +
+geom_vline(xintercept = 7
+trials = c(6,24,37,57,70,91,102,122)
+animat_states = animat_data[trial == trials[4] & timestep %in% 5:20, 4:12]
+ggplot() +
+#geom_segment(aes(y = cause, yend = reader, x = cause_timestep, xend = reader_timestep))+#, alpha = 1-strenght)) +
+geom_point(data = animat_states, aes(x=timestep, y = 1, fill = as.factor(S1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 2, fill = as.factor(S2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 3, fill = as.factor(M1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 4, fill = as.factor(M2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 5, fill = as.factor(H1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 6, fill = as.factor(H2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 7, fill = as.factor(H3)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 8, fill = as.factor(H4)), shape = 21, size=5) +
+scale_fill_manual(values = c("white","black")) +
+geom_vline(xintercept = 7)
+trials = c(6,24,37,57,70,91,102,122)
+animat_states = animat_data[trial == trials[3] & timestep %in% 5:20, 4:12]
+ggplot() +
+#geom_segment(aes(y = cause, yend = reader, x = cause_timestep, xend = reader_timestep))+#, alpha = 1-strenght)) +
+geom_point(data = animat_states, aes(x=timestep, y = 1, fill = as.factor(S1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 2, fill = as.factor(S2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 3, fill = as.factor(M1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 4, fill = as.factor(M2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 5, fill = as.factor(H1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 6, fill = as.factor(H2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 7, fill = as.factor(H3)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 8, fill = as.factor(H4)), shape = 21, size=5) +
+scale_fill_manual(values = c("white","black")) +
+geom_vline(xintercept = 7)
+trials = c(6,24,39,57,70,91,102,122)
+animat_states = animat_data[trial == trials[3] & timestep %in% 5:20, 4:12]
+ggplot() +
+#geom_segment(aes(y = cause, yend = reader, x = cause_timestep, xend = reader_timestep))+#, alpha = 1-strenght)) +
+geom_point(data = animat_states, aes(x=timestep, y = 1, fill = as.factor(S1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 2, fill = as.factor(S2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 3, fill = as.factor(M1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 4, fill = as.factor(M2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 5, fill = as.factor(H1)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 6, fill = as.factor(H2)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 7, fill = as.factor(H3)), shape = 21, size=5) +
+geom_point(data = animat_states, aes(x=timestep, y = 8, fill = as.factor(H4)), shape = 21, size=5) +
+scale_fill_manual(values = c("white","black")) +
+geom_vline(xintercept = 7)
